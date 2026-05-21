@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLflow Run Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            font-size: 11px;
+            color: #333;
+        }
+        h1 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            color: #444;
+            display: inline-block;
+        }
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .filters select {
+            font-size: 11px;
+            padding: 2px 4px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 4px 8px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #fafafa;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        tr.run-row:hover {
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
+        tr.recent-run {
+            background-color: #eef7eb;
+        }
+        tr.recent-run:hover {
+            background-color: #e2f0dd;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .exp-badge:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+        .run-id {
+            font-family: monospace; 
+            color: #666;
+            transition: color 0.2s;
+        }
+        .run-id:hover {
+            color: #000;
+            text-decoration: underline;
+        }
+        .source { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+        .status-cell { text-align: center; font-size: 12px; }
+        .abort-btn {
+            color: #dc3545;
+            font-weight: bold;
+            margin-left: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+        }
+        .abort-btn:hover {
+            color: #a71d2a;
+        }
+    </style>
+    <script>
+        async function abortRun(e, runId) {
+            e.stopPropagation();
+            if (confirm("Are you sure you want to abort this run?")) {
+                try {
+                    let response = await fetch('/abort/' + runId, { method: 'POST' });
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        let res = await response.json();
+                        alert("Error aborting run: " + res.message);
+                    }
+                } catch (error) {
+                    alert("Error aborting run: " + error);
+                }
+            }
+        }
+
+        function copyRunId(e, runId) {
+            e.stopPropagation();
+            navigator.clipboard.writeText(runId).then(() => {
+                const td = e.target;
+                const oldText = td.innerText;
+                td.innerText = 'Copied!';
+                setTimeout(() => td.innerText = oldText, 1000);
+            });
+        }
+        
+        function openRun(runId, expId) {
+            window.open('{{ mlflow_url }}/#/experiments/' + expId + '/runs/' + runId, '_blank');
+        }
+
+        function openExperiment(e, expId) {
+            e.stopPropagation();
+            window.open('{{ mlflow_url }}/#/experiments/' + expId, '_blank');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const timeCells = document.querySelectorAll('.dynamic-last-active');
+            timeCells.forEach(async (cell) => {
+                const runId = cell.dataset.runId;
+                const durationCell = document.querySelector(`.dynamic-duration[data-run-id="${runId}"]`);
+                const tr = cell.closest('tr');
+                try {
+                    const response = await fetch('/run/' + runId + '/last_active');
+                    if (response.ok) {
+                        const data = await response.json();
+                        cell.innerHTML = data.last_active;
+                        if (durationCell) durationCell.innerHTML = data.duration;
+                        if (data.is_recent) {
+                            tr.classList.add('recent-run');
+                        } else {
+                            tr.classList.remove('recent-run');
+                        }
+                    } else {
+                        cell.innerHTML = cell.dataset.fallback;
+                        if (durationCell) durationCell.innerHTML = "N/A";
+                    }
+                } catch (e) {
+                    cell.innerHTML = cell.dataset.fallback;
+                    if (durationCell) durationCell.innerHTML = "N/A";
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>MLflow Latest Runs</h1>
+        <div class="filters">
+            <form method="GET" action="/" id="filter-form">
+                <select name="user" onchange="document.getElementById('filter-form').submit()">
+                    <option value="">All Users</option>
+                    {% for u in all_users %}
+                    <option value="{{ u }}" {% if u == current_user %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+                <select name="experiment" onchange="document.getElementById('filter-form').submit()">
+                    <option value="">All Experiments</option>
+                    {% for e in all_experiments %}
+                    <option value="{{ e }}" {% if e == current_exp %}selected{% endif %}>{{ e }}</option>
+                    {% endfor %}
+                </select>
+                <a href="/" style="text-decoration: none; color: #007bff; font-size: 11px; margin-left: 5px;">Clear</a>
+            </form>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th title="Start Time">Time</th>
+                <th title="Duration (Last Active - Start)">Duration</th>
+                <th title="Time since last activity">Last Active</th>
+                <th title="Status" style="text-align: center;">St</th>
+                <th>Experiment</th>
+                <th>User</th>
+                <th>Machine / Source</th>
+                <th>Run ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for run in runs %}
+            <tr class="run-row {% if run.is_recent %}recent-run{% endif %}" onclick="openRun('{{ run.run_id }}', '{{ run.experiment_id }}')">
+                <td title="{{ run.time_full }}">{{ run.time_rel }}</td>
+                <td class="dynamic-duration" data-run-id="{{ run.run_id }}">{{ run.duration }}</td>
+                
+                {% if run.status == 'RUNNING' %}
+                <td class="dynamic-last-active" data-run-id="{{ run.run_id }}" data-fallback="{{ run.last_active_rel }}">
+                    {{ run.last_active_rel }} <span style="font-size: 8px;">⏳</span>
+                </td>
+                {% else %}
+                <td>{{ run.last_active_rel }}</td>
+                {% endif %}
+                
+                <td class="status-cell" title="{{ run.status }}">
+                    {% if run.status == 'FINISHED' %}✅
+                    {% elif run.status == 'FAILED' %}❌
+                    {% elif run.status == 'RUNNING' %}
+                        🔄
+                        <span class="abort-btn" onclick="abortRun(event, '{{ run.run_id }}')" title="Abort Run">&times;</span>
+                    {% elif run.status == 'KILLED' %}🛑
+                    {% elif run.status == 'SCHEDULED' %}⏳
+                    {% else %}❓{% endif %}
+                </td>
+                <td><span class="badge exp-badge" onclick="openExperiment(event, '{{ run.experiment_id }}')" style="background-color: {{ run.exp_bg }}; color: {{ run.exp_text }};">{{ run.experiment_name }}</span></td>
+                <td><span class="badge" style="background-color: {{ run.user_bg }}; color: {{ run.user_text }}">{{ run.user }}</span></td>
+                <td class="source" title="{{ run.source }}">{{ run.source }}</td>
+                <td class="run-id" onclick="copyRunId(event, '{{ run.run_id }}')" title="Copy Run ID" style="cursor: copy;">{{ run.run_id[:8] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 20px;">No runs found or unable to connect to MLflow.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination" style="margin-top: 15px; text-align: center; font-size: 12px;">
+        {% if page > 1 %}
+        <a href="?page={{ page-1 }}&limit={{ limit }}&user={{ current_user }}&experiment={{ current_exp }}" style="text-decoration: none; padding: 4px 8px; border: 1px solid #ccc; background: #fff; border-radius: 3px; color: #333; margin-right: 10px;">&laquo; Previous</a>
+        {% endif %}
+        
+        <span style="color: #666;">Page {{ page }} of {{ total_pages }}</span>
+        
+        {% if page < total_pages %}
+        <a href="?page={{ page+1 }}&limit={{ limit }}&user={{ current_user }}&experiment={{ current_exp }}" style="text-decoration: none; padding: 4px 8px; border: 1px solid #ccc; background: #fff; border-radius: 3px; color: #333; margin-left: 10px;">Next &raquo;</a>
+        {% endif %}
+    </div>
+
+</body>
+</html>
