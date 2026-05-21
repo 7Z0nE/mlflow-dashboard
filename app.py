@@ -223,6 +223,15 @@ def abort_run(run_id):
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
+@app.route('/run/<run_id>/delete', methods=['POST'])
+def delete_run(run_id):
+    client = MlflowClient()
+    try:
+        client.delete_run(run_id)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
 @app.route('/')
 def index():
     client = MlflowClient()
