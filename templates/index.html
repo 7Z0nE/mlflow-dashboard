@@ -108,6 +108,8 @@
     </style>
     <!-- Add Marked.js for Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Add Chart.js for metric charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .markdown-body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -218,6 +220,64 @@
             }
         }
         
+        const charts = {};
+
+        async function loadMetricChart(runId) {
+            const chartContainer = document.getElementById('chart-container-' + runId);
+            
+            try {
+                const response = await fetch(`/run/${runId}/metric?key=loss`);
+                if (response.ok) {
+                    const res = await response.json();
+                    if (res.data && res.data.length > 0) {
+                        chartContainer.style.display = 'block';
+                        
+                        const ctx = document.getElementById('chart-' + runId).getContext('2d');
+                        if (charts[runId]) {
+                            charts[runId].destroy();
+                        }
+                        
+                        const labels = res.data.map(d => d.step);
+                        const values = res.data.map(d => d.value);
+                        
+                        charts[runId] = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'loss',
+                                    data: values,
+                                    borderColor: '#007bff',
+                                    backgroundColor: 'rgba(0,123,255,0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: true,
+                                    tension: 0.1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: true, position: 'top', labels: { font: { size: 10 } } }
+                                },
+                                scales: {
+                                    x: { title: { display: true, text: 'Step', font: { size: 10 } }, ticks: { font: { size: 9 } } },
+                                    y: { ticks: { font: { size: 9 } } }
+                                }
+                            }
+                        });
+                    } else {
+                        chartContainer.innerHTML = '<span style="color: #888; font-style: italic;">No loss metrics available.</span>';
+                        chartContainer.style.display = 'block';
+                        chartContainer.style.height = 'auto';
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load chart for run", runId, e);
+            }
+        }
+        
         async function toggleRow(runId) {
             const detailsRow = document.getElementById('details-' + runId);
             const summaryContentDiv = document.getElementById('summary-content-' + runId);
@@ -226,7 +286,10 @@
                 detailsRow.style.display = 'table-row';
                 if (!summaryContentDiv.dataset.loaded) {
                     summaryContentDiv.dataset.loaded = "true";
-                    await loadSummary(runId, false);
+                    loadSummary(runId, false);
+                    loadMetricChart(runId);
+                } else {
+                    loadMetricChart(runId);
                 }
             } else {
                 detailsRow.style.display = 'none';
@@ -337,7 +400,12 @@
                                 <a href="#" onclick="openRun('{{ run.run_id }}', '{{ run.experiment_id }}'); return false;" style="color: #007bff; text-decoration: none;">Open in MLflow ↗</a>
                             </div>
                         </div>
-                        <div id="summary-content-{{ run.run_id }}" style="font-family: monospace; white-space: pre-wrap; color: #555; max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div id="chart-container-{{ run.run_id }}" style="display: none; height: 150px; width: 100%;">
+                                <canvas id="chart-{{ run.run_id }}"></canvas>
+                            </div>
+                            <div id="summary-content-{{ run.run_id }}" style="font-family: monospace; white-space: pre-wrap; color: #555; max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+                        </div>
                     </div>
                 </td>
             </tr>

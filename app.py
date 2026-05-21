@@ -90,6 +90,32 @@ def get_run_last_active(run_id):
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.route('/run/<run_id>/metric')
+def get_run_metric(run_id):
+    metric_key = request.args.get('key', 'loss')
+    client = MlflowClient()
+    try:
+        run = client.get_run(run_id)
+        if metric_key not in run.data.metrics:
+            alt_key = 'metrics/' + metric_key if not metric_key.startswith('metrics/') else metric_key.replace('metrics/', '')
+            if alt_key in run.data.metrics:
+                metric_key = alt_key
+            else:
+                return {"data": []}
+                
+        history = client.get_metric_history(run_id, metric_key)
+        data = [{"step": m.step, "value": m.value, "timestamp": m.timestamp} for m in history]
+        
+        if len(data) > 500:
+            step = len(data) // 500
+            data = data[::step]
+            
+        return {"data": data}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
 @app.route('/run/<run_id>/summary')
 def get_run_summary(run_id):
     force_generate = request.args.get('force') == '1'
