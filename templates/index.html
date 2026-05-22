@@ -81,7 +81,8 @@
             color: #000;
             text-decoration: underline;
         }
-        .source { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+        .run-name { max-width: 20vw; overflow: hidden; text-overflow: ellipsis; }
+        .host-col { max-width: 15vw; overflow: hidden; text-overflow: ellipsis; }
         .status-cell { text-align: center; font-size: 12px; }
         .abort-btn {
             color: #dc3545;
@@ -500,9 +501,9 @@
             <tr>
                 <th style="width: 20px; text-align: center;"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
                 <th>Run Name</th>
-                <th title="Start Time">Time</th>
+                <th title="Start Time">Started</th>
                 <th title="Duration (Last Active - Start)">Duration</th>
-                <th title="Time since last activity">Last Active</th>
+                <th title="Time since last activity">Active</th>
                 <th title="Status" style="text-align: center;">St</th>
                 <th>Experiment</th>
                 <th>User</th>
@@ -514,7 +515,7 @@
             {% for run in runs %}
             <tr class="run-row {% if run.is_recent %}recent-run{% endif %}" onclick="toggleRow('{{ run.run_id }}')">
                 <td style="text-align: center;" onclick="event.stopPropagation();"><input type="checkbox" class="run-checkbox" value="{{ run.run_id }}" onchange="updateBatchActions()"></td>
-                <td>{{ run.run_name }}</td>
+                <td class="run-name" title="{{ run.run_name }}">{{ run.run_name }}</td>
                 <td title="{{ run.time_full }}">{{ run.time_rel }}</td>
                 <td class="dynamic-duration" data-run-id="{{ run.run_id }}">{{ run.duration }}</td>
                 
@@ -538,7 +539,7 @@
                 </td>
                 <td><span class="badge exp-badge" onclick="openExperiment(event, '{{ run.experiment_id }}')" style="background-color: {{ run.exp_bg }}; color: {{ run.exp_text }};">{{ run.experiment_name }}</span></td>
                 <td><span class="badge" style="background-color: {{ run.user_bg }}; color: {{ run.user_text }}">{{ run.user }}</span></td>
-                <td class="source" title="{{ run.host }}">{{ run.host }}</td>
+                <td class="host-col" title="{{ run.host }}">{{ run.host }}</td>
                 <td class="run-id" onclick="copyRunId(event, '{{ run.run_id }}')" title="Copy Run ID" style="cursor: copy;">{{ run.run_id[:8] }}</td>
             </tr>
             <tr id="details-{{ run.run_id }}" style="display: none; background-color: #fafafa;">
