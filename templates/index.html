@@ -175,6 +175,20 @@
                 setTimeout(() => td.innerText = oldText, 1000);
             });
         }
+
+        function copySummary(e, runId) {
+            e.stopPropagation();
+            const summaryDiv = document.getElementById('summary-content-' + runId);
+            const rawSummary = summaryDiv.dataset.rawSummary;
+            if (rawSummary) {
+                navigator.clipboard.writeText(rawSummary).then(() => {
+                    const btn = e.target;
+                    const oldText = btn.innerText;
+                    btn.innerText = 'Copied! ✅';
+                    setTimeout(() => btn.innerText = oldText, 2000);
+                });
+            }
+        }
         
         function openRun(runId, expId) {
             window.open('{{ mlflow_url }}/#/experiments/' + expId + '/runs/' + runId, '_blank');
@@ -188,10 +202,12 @@
         async function loadSummary(runId, force = false) {
             const summaryContentDiv = document.getElementById('summary-content-' + runId);
             const controlsDiv = document.getElementById('summary-controls-' + runId);
+            const copyBtn = document.getElementById('copy-summary-btn-' + runId);
             
             summaryContentDiv.innerHTML = 'Loading summary...';
             summaryContentDiv.classList.remove('markdown-body');
             controlsDiv.innerHTML = '';
+            if (copyBtn) copyBtn.style.display = 'none';
             
             try {
                 const url = force ? `/run/${runId}/summary?force=1` : `/run/${runId}/summary`;
@@ -202,11 +218,13 @@
                         summaryContentDiv.innerHTML = '<em>No summary generated yet.</em>';
                         controlsDiv.innerHTML = `<button onclick="loadSummary('${runId}', true)" class="action-btn">Generate Summary</button>`;
                     } else if (data.status === 'exists') {
+                        summaryContentDiv.dataset.rawSummary = data.summary;
                         summaryContentDiv.innerHTML = marked.parse(data.summary);
                         summaryContentDiv.classList.add('markdown-body');
                         summaryContentDiv.style.fontFamily = ''; // Remove pre-wrap style
                         summaryContentDiv.style.whiteSpace = 'normal';
                         controlsDiv.innerHTML = `<button onclick="loadSummary('${runId}', true)" class="action-btn">Regenerate Summary</button>`;
+                        if (copyBtn) copyBtn.style.display = 'inline';
                     } else if (data.status === 'error' || data.error) {
                         summaryContentDiv.innerHTML = `<span style="color: red;">Error: ${data.error || 'Unknown error'}</span>`;
                         controlsDiv.innerHTML = `<button onclick="loadSummary('${runId}', true)" class="action-btn">Try Again</button>`;
@@ -397,6 +415,8 @@
                             <strong>Run Details & Summary</strong>
                             <div>
                                 <span id="summary-controls-{{ run.run_id }}" style="margin-right: 10px;"></span>
+                                <a href="#" onclick="copySummary(event, '{{ run.run_id }}'); return false;" style="color: #28a745; text-decoration: none; margin-right: 15px; display: none;" id="copy-summary-btn-{{ run.run_id }}">Copy Summary 📋</a>
+                                <a href="#" onclick="deleteRun('{{ run.run_id }}'); return false;" style="color: #dc3545; text-decoration: none; margin-right: 15px;">Delete Run 🗑</a>
                                 <a href="#" onclick="openRun('{{ run.run_id }}', '{{ run.experiment_id }}'); return false;" style="color: #007bff; text-decoration: none;">Open in MLflow ↗</a>
                             </div>
                         </div>
