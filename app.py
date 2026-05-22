@@ -116,6 +116,29 @@ def get_run_metric(run_id):
         traceback.print_exc()
         return {"error": str(e)}, 500
 
+@app.route('/run/<run_id>/latest_log')
+def get_run_latest_log(run_id):
+    client = MlflowClient()
+    try:
+        artifacts = client.list_artifacts(run_id, "logs")
+        log_files = [a.path for a in artifacts if a.path.endswith('.log') and 'summary.log' not in a.path]
+        if not log_files:
+            return {"log_content": "No log files available.", "log_name": None}
+            
+        # Sort alphabetically (e.g. console00004.log > console00001.log)
+        log_files.sort()
+        latest_log_path = log_files[-1]
+        
+        local_path = client.download_artifacts(run_id, latest_log_path)
+        with open(local_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+            
+        return {"log_content": content, "log_name": latest_log_path}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
 @app.route('/run/<run_id>/summary')
 def get_run_summary(run_id):
     force_generate = request.args.get('force') == '1'

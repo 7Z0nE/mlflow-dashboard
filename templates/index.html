@@ -238,6 +238,48 @@
             }
         }
         
+        async function loadLatestLog(runId) {
+            const container = document.getElementById('latest-log-container-' + runId);
+            const contentDiv = document.getElementById('latest-log-content-' + runId);
+            const titleSpan = document.getElementById('latest-log-title-' + runId);
+            
+            container.style.display = 'block';
+            contentDiv.innerText = 'Loading latest log...';
+            
+            try {
+                const response = await fetch(`/run/${runId}/latest_log`);
+                if (response.ok) {
+                    const res = await response.json();
+                    if (res.log_name) {
+                        titleSpan.innerText = "Latest Log (" + res.log_name + ")";
+                        contentDiv.innerText = res.log_content;
+                        contentDiv.dataset.rawLog = res.log_content;
+                    } else {
+                        container.style.display = 'none';
+                    }
+                } else {
+                    container.style.display = 'none';
+                }
+            } catch (e) {
+                container.style.display = 'none';
+                console.error("Failed to load latest log for run", runId, e);
+            }
+        }
+        
+        function copyLatestLog(e, runId) {
+            e.stopPropagation();
+            const contentDiv = document.getElementById('latest-log-content-' + runId);
+            const rawLog = contentDiv.dataset.rawLog;
+            if (rawLog) {
+                navigator.clipboard.writeText(rawLog).then(() => {
+                    const btn = e.target;
+                    const oldText = btn.innerText;
+                    btn.innerText = 'Copied! ✅';
+                    setTimeout(() => btn.innerText = oldText, 2000);
+                });
+            }
+        }
+
         const charts = {};
 
         async function loadMetricChart(runId) {
@@ -306,8 +348,11 @@
                     summaryContentDiv.dataset.loaded = "true";
                     loadSummary(runId, false);
                     loadMetricChart(runId);
+                    loadLatestLog(runId);
                 } else {
                     loadMetricChart(runId);
+                    // Also reload latest log in case it was updated
+                    loadLatestLog(runId);
                 }
             } else {
                 detailsRow.style.display = 'none';
@@ -425,6 +470,15 @@
                                 <canvas id="chart-{{ run.run_id }}"></canvas>
                             </div>
                             <div id="summary-content-{{ run.run_id }}" style="font-family: monospace; white-space: pre-wrap; color: #555; max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+                            
+                            <!-- Latest Log Section -->
+                            <div id="latest-log-container-{{ run.run_id }}" style="display: none; border-top: 1px solid #eaeaea; padding-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <strong style="color: #666;"><span id="latest-log-title-{{ run.run_id }}">Latest Log</span></strong>
+                                    <a href="#" onclick="copyLatestLog(event, '{{ run.run_id }}'); return false;" style="color: #28a745; text-decoration: none; font-size: 11px;">Copy Log 📋</a>
+                                </div>
+                                <div id="latest-log-content-{{ run.run_id }}" style="background-color: #f6f8fa; border-radius: 3px; padding: 10px; font-family: monospace; font-size: 11px; white-space: pre-wrap; max-height: 250px; overflow-y: auto; color: #24292e;">Loading latest log...</div>
+                            </div>
                         </div>
                     </div>
                 </td>
