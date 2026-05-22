@@ -9,4 +9,5 @@ dependencies = [
     "litellm>=1.85.1",
     "mlflow>=3.12.0",
     "python-dotenv>=1.2.2",
+    "boto3>=1.34.0",
 ]
