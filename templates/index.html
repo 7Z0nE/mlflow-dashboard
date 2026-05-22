@@ -238,6 +238,69 @@
             }
         }
         
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('select-all').checked;
+            const checkboxes = document.querySelectorAll('.run-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll);
+            updateBatchActions();
+        }
+
+        function updateBatchActions() {
+            const checkboxes = document.querySelectorAll('.run-checkbox:checked');
+            const batchActions = document.getElementById('batch-actions');
+            if (checkboxes.length > 0) {
+                batchActions.style.display = 'flex';
+            } else {
+                batchActions.style.display = 'none';
+            }
+        }
+
+        async function batchDelete() {
+            const checkboxes = document.querySelectorAll('.run-checkbox:checked');
+            const runIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (confirm(`Are you sure you want to permanently delete ${runIds.length} runs?`)) {
+                try {
+                    let response = await fetch('/run/batch_delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ run_ids: runIds })
+                    });
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        let res = await response.json();
+                        alert("Error deleting runs: " + res.message);
+                    }
+                } catch (error) {
+                    alert("Error deleting runs: " + error);
+                }
+            }
+        }
+
+        async function batchAbort() {
+            const checkboxes = document.querySelectorAll('.run-checkbox:checked');
+            const runIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (confirm(`Are you sure you want to abort ${runIds.length} runs?`)) {
+                try {
+                    let response = await fetch('/run/batch_abort', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ run_ids: runIds })
+                    });
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        let res = await response.json();
+                        alert("Error aborting runs: " + res.message);
+                    }
+                } catch (error) {
+                    alert("Error aborting runs: " + error);
+                }
+            }
+        }
+
         async function loadLatestLog(runId) {
             const container = document.getElementById('latest-log-container-' + runId);
             const contentDiv = document.getElementById('latest-log-content-' + runId);
@@ -392,6 +455,10 @@
 
     <div class="header-container">
         <h1>MLflow Latest Runs</h1>
+        <div class="batch-actions" id="batch-actions" style="display: none; align-items: center; gap: 5px;">
+            <button class="action-btn" onclick="batchAbort()" style="color: #d39e00;">Abort Selected 🛑</button>
+            <button class="action-btn" onclick="batchDelete()" style="color: #dc3545;">Delete Selected 🗑</button>
+        </div>
         <div class="filters">
             <form method="GET" action="/" id="filter-form">
                 <select name="user" onchange="document.getElementById('filter-form').submit()">
@@ -414,6 +481,7 @@
     <table>
         <thead>
             <tr>
+                <th style="width: 20px; text-align: center;"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
                 <th title="Start Time">Time</th>
                 <th title="Duration (Last Active - Start)">Duration</th>
                 <th title="Time since last activity">Last Active</th>
@@ -427,6 +495,7 @@
         <tbody>
             {% for run in runs %}
             <tr class="run-row {% if run.is_recent %}recent-run{% endif %}" onclick="toggleRow('{{ run.run_id }}')">
+                <td style="text-align: center;" onclick="event.stopPropagation();"><input type="checkbox" class="run-checkbox" value="{{ run.run_id }}" onchange="updateBatchActions()"></td>
                 <td title="{{ run.time_full }}">{{ run.time_rel }}</td>
                 <td class="dynamic-duration" data-run-id="{{ run.run_id }}">{{ run.duration }}</td>
                 
@@ -454,7 +523,7 @@
                 <td class="run-id" onclick="copyRunId(event, '{{ run.run_id }}')" title="Copy Run ID" style="cursor: copy;">{{ run.run_id[:8] }}</td>
             </tr>
             <tr id="details-{{ run.run_id }}" style="display: none; background-color: #fafafa;">
-                <td colspan="8">
+                <td colspan="9">
                     <div style="padding: 10px; border: 1px solid #eee; border-radius: 4px; background: #fff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #eaeaea; padding-bottom: 5px;">
                             <strong>Run Details & Summary</strong>
@@ -485,7 +554,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="8" style="text-align: center; padding: 20px;">No runs found or unable to connect to MLflow.</td>
+                <td colspan="9" style="text-align: center; padding: 20px;">No runs found or unable to connect to MLflow.</td>
             </tr>
             {% endfor %}
         </tbody>

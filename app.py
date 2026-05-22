@@ -255,6 +255,30 @@ def delete_run(run_id):
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
+@app.route('/run/batch_delete', methods=['POST'])
+def batch_delete_runs():
+    client = MlflowClient()
+    data = request.json
+    run_ids = data.get('run_ids', []) if data else []
+    try:
+        for run_id in run_ids:
+            client.delete_run(run_id)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
+@app.route('/run/batch_abort', methods=['POST'])
+def batch_abort_runs():
+    client = MlflowClient()
+    data = request.json
+    run_ids = data.get('run_ids', []) if data else []
+    try:
+        for run_id in run_ids:
+            client.set_terminated(run_id, status="KILLED")
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
 @app.route('/')
 def index():
     client = MlflowClient()
