@@ -499,6 +499,7 @@
         <thead>
             <tr>
                 <th style="width: 20px; text-align: center;"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
+                <th>Run Name</th>
                 <th title="Start Time">Time</th>
                 <th title="Duration (Last Active - Start)">Duration</th>
                 <th title="Time since last activity">Last Active</th>
@@ -513,6 +514,7 @@
             {% for run in runs %}
             <tr class="run-row {% if run.is_recent %}recent-run{% endif %}" onclick="toggleRow('{{ run.run_id }}')">
                 <td style="text-align: center;" onclick="event.stopPropagation();"><input type="checkbox" class="run-checkbox" value="{{ run.run_id }}" onchange="updateBatchActions()"></td>
+                <td>{{ run.run_name }}</td>
                 <td title="{{ run.time_full }}">{{ run.time_rel }}</td>
                 <td class="dynamic-duration" data-run-id="{{ run.run_id }}">{{ run.duration }}</td>
                 
@@ -540,7 +542,7 @@
                 <td class="run-id" onclick="copyRunId(event, '{{ run.run_id }}')" title="Copy Run ID" style="cursor: copy;">{{ run.run_id[:8] }}</td>
             </tr>
             <tr id="details-{{ run.run_id }}" style="display: none; background-color: #fafafa;">
-                <td colspan="9">
+                <td colspan="10">
                     <div style="padding: 10px; border: 1px solid #eee; border-radius: 4px; background: #fff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #eaeaea; padding-bottom: 5px;">
                             <strong>Run Details & Summary</strong>
@@ -571,7 +573,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="9" style="text-align: center; padding: 20px;">No runs found or unable to connect to MLflow.</td>
+                <td colspan="10" style="text-align: center; padding: 20px;">No runs found or unable to connect to MLflow.</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -365,8 +365,15 @@ def index():
         exp_bg, exp_text = get_color_and_text_color_from_string(exp_name)
         user_bg, user_text = get_color_and_text_color_from_string(user_short)
         
+        run_name = getattr(run.info, 'run_name', '')
+        if not run_name:
+            run_name = tags.get('mlflow.runName', 'Unnamed')
+            
+        run_name_clipped = run_name[:30] + '...' if len(run_name) > 30 else run_name
+        
         run_data.append({
             'run_id': run.info.run_id,
+            'run_name': run_name_clipped,
             'experiment_id': run.info.experiment_id,
             'experiment_name': exp_name,
             'exp_bg': exp_bg,
