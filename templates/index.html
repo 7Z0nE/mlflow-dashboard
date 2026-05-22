@@ -167,6 +167,22 @@
             }
         }
 
+        async function deleteRun(runId) {
+            if (confirm("Are you sure you want to permanently delete this run?")) {
+                try {
+                    let response = await fetch('/run/' + runId + '/delete', { method: 'POST' });
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        let res = await response.json();
+                        alert("Error deleting run: " + res.message);
+                    }
+                } catch (error) {
+                    alert("Error deleting run: " + error);
+                }
+            }
+        }
+
         function copyRunId(e, runId) {
             e.stopPropagation();
             navigator.clipboard.writeText(runId).then(() => {
