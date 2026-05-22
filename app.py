@@ -390,6 +390,7 @@ def index():
             'status': status,
         })
         
+    loss_metric_name = os.environ.get('LOSS_METRIC', 'loss')
     return render_template('index.html', 
                            runs=run_data, 
                            all_users=sorted(list(all_users)), 
@@ -397,6 +398,7 @@ def index():
                            current_user=filter_user,
                            current_exp=filter_exp,
                            mlflow_url=mlflow_url,
+                           loss_metric_name=loss_metric_name,
                            page=page,
                            limit=limit,
                            total_pages=total_pages)

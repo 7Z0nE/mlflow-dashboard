@@ -367,7 +367,7 @@
             const chartContainer = document.getElementById('chart-container-' + runId);
             
             try {
-                const response = await fetch(`/run/${runId}/metric?key=loss`);
+                const response = await fetch(`/run/${runId}/metric?key={{ loss_metric_name }}`);
                 if (response.ok) {
                     const res = await response.json();
                     if (res.data && res.data.length > 0) {
@@ -386,7 +386,7 @@
                             data: {
                                 labels: labels,
                                 datasets: [{
-                                    label: 'loss',
+                                    label: '{{ loss_metric_name }}',
                                     data: values,
                                     borderColor: '#007bff',
                                     backgroundColor: 'rgba(0,123,255,0.1)',
@@ -409,7 +409,7 @@
                             }
                         });
                     } else {
-                        chartContainer.innerHTML = '<span style="color: #888; font-style: italic;">No loss metrics available.</span>';
+                        chartContainer.innerHTML = '<span style="color: #888; font-style: italic;">No {{ loss_metric_name }} metrics available.</span>';
                         chartContainer.style.display = 'block';
                         chartContainer.style.height = 'auto';
                     }
